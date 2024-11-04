@@ -74,5 +74,77 @@ class QuoteBot(Bot):
             self.send_text_with_quote(msg['chat']['id'], msg["text"], quoted_msg_id=msg["message_id"])
 
 
+import os
+import logging
+
+logger = logging.getLogger(__name__)
+
+def download_user_photo(self, msg):
+    # Example implementation, ensure your actual logic here
+    # is robust and properly downloads the photo.
+    try:
+        # Your logic to download the photo
+        photo_path = "/path/to/downloaded/photo.jpg"  # This should be the actual download logic
+        logger.info(f'Downloaded photo at: {photo_path}')
+        return photo_path
+    except Exception as e:
+        logger.error(f'Failed to download photo: {e}')
+        return None  # Ensure this returns None if there's an error
+
+
 class ImageProcessingBot(Bot):
-    pass
+    def handle_message(self, msg):
+        logger.info(f'Incoming message: {msg}')
+
+        if not self.is_current_msg_photo(msg):
+            self.send_text(msg['chat']['id'], "Please send a photo with a valid caption.")
+            return
+
+        caption = msg.get("caption", "").strip()
+
+        if not caption:
+            self.send_text(msg['chat']['id'], "Please provide a caption for the image processing.")
+            return
+
+        try:
+            # Attempt to download the user's photo
+            photo_path = self.download_user_photo(msg)
+            logger.info(f'Downloaded photo path: {photo_path}')
+
+            if not photo_path or not os.path.exists(photo_path):
+                logger.error('Photo download failed or path is invalid.')
+                self.send_text(msg['chat']['id'],
+                               "Failed to download the photo or the photo path is invalid. Please try again.")
+                return
+
+            if caption.lower() == 'concat':
+                if hasattr(self, '_first_image_path') and self._first_image_path:
+                    # Process second image for concatenation
+                    second_photo_path = photo_path
+                    logger.info(
+                        f'Processing concatenation - First: {self._first_image_path}, Second: {second_photo_path}')
+
+                    # Create image objects
+                    first_img = Img(self._first_image_path)
+                    second_img = Img(second_photo_path)
+
+                    # Perform concatenation
+                    result_path = first_img.concat(second_img)
+
+                    # Send result and clean up
+                    self.send_photo(msg['chat']['id'], result_path)
+                    self._first_image_path = None  # Reset after successful concat
+                else:
+                    # Store first image and wait for second
+                    self._first_image_path = photo_path
+                    logger.info(f'Stored first image for concat: {self._first_image_path}')
+                    self.send_text(msg['chat']['id'],
+                                   "First image received. Please send the second image with 'concat' caption.")
+                return
+
+            # Rest of your image processing code...
+            # (keeping the rest of the original code unchanged)
+
+        except Exception as e:
+            logger.error(f'Error processing image: {str(e)}')
+            self.send_text(msg['chat']['id'], f"Error processing image: {str(e)}")

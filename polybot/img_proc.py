@@ -1,4 +1,6 @@
 from pathlib import Path
+import random
+
 from matplotlib.image import imread, imsave
 
 
@@ -46,22 +48,60 @@ class Img:
         for i, row in enumerate(self.data):
             res = []
             for j in range(1, len(row)):
-                res.append(abs(row[j-1] - row[j]))
+                res.append(abs(row[j - 1] - row[j]))
 
             self.data[i] = res
 
     def rotate(self):
-        # TODO remove the `raise` below, and write your implementation
-        raise NotImplementedError()
+        self.data = [list(row) for row in zip(*self.data[::-1])]
+        self.save_img()
 
     def salt_n_pepper(self):
-        # TODO remove the `raise` below, and write your implementation
-        raise NotImplementedError()
+        for i in range(len(self.data)):
+            for j in range(len(self.data[i])):
+                # מספר אקראי
+                rand_val = random.random()
+
+                # הוספת (255)
+                if rand_val < 0.2:
+                    self.data[i][j] = 255
+
+                # הוספת (0)
+                elif rand_val > 0.8:
+                    self.data[i][j] = 0
+        self.save_img()
 
     def concat(self, other_img, direction='horizontal'):
-        # TODO remove the `raise` below, and write your implementation
-        raise NotImplementedError()
+        if len(self.data) != len(other_img.data):
+            raise RuntimeError(
+                "Error: The heights of the images are different, and therefore cannot be concatenated horizontally.")
+
+        if direction == 'horizontal':
+            # בדיקת גובה
+            if len(self.data) != len(other_img.data):
+                raise RuntimeError("Images must have the same height for horizontal concatenation.")
+
+            # שרשור אופקי
+            self.data = [row1 + row2 for row1, row2 in zip(self.data, other_img.data)]
+
+        elif direction == 'vertical':
+            # בדיקת רוחב
+            if len(self.data[0]) != len(other_img.data[0]):
+                raise RuntimeError("Images must have the same width for vertical concatenation.")
+
+            # שרשור אנכי
+            self.data = self.data + other_img.data
+
+        else:
+            raise RuntimeError("Invalid direction. Use 'horizontal' or 'vertical'.")
+
+        return self.save_img()
 
     def segment(self):
-        # TODO remove the `raise` below, and write your implementation
-        raise NotImplementedError()
+        for i in range(len(self.data)):
+            for j in range(len(self.data[i])):
+                if self.data[i][j] > 100:
+                    self.data[i][j] = 255  # White
+                else:
+                    self.data[i][j] = 0  # Black
+        self.save_img()
