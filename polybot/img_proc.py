@@ -94,8 +94,9 @@ class Img:
 
         else:
             raise RuntimeError("Invalid direction. Use 'horizontal' or 'vertical'.")
-
+        # return value
         return self.save_img()
+
 
     def segment(self):
         for i in range(len(self.data)):
