@@ -1,6 +1,7 @@
 import telebot
 from loguru import logger
 import os
+import logging
 import time
 from telebot.types import InputFile
 from polybot.img_proc import Img
@@ -74,17 +75,29 @@ class QuoteBot(Bot):
             self.send_text_with_quote(msg['chat']['id'], msg["text"], quoted_msg_id=msg["message_id"])
 
 
-import os
-import logging
-
 logger = logging.getLogger(__name__)
+
+import tempfile  # Import tempfile for handling temporary files
+
+import os
+import tempfile  # Import tempfile for handling temporary files
+
 
 def download_user_photo(self, msg):
     # Example implementation, ensure your actual logic here
     # is robust and properly downloads the photo.
     try:
-        # Your logic to download the photo
-        photo_path = "/path/to/downloaded/photo.jpg"  # This should be the actual download logic
+        if not self.is_current_msg_photo(msg):
+            raise RuntimeError('Message content of type \'photo\' expected')
+
+        file_info = self.telegram_bot_client.get_file(msg['photo'][-1]['file_id'])
+        data = self.telegram_bot_client.download_file(file_info.file_path)
+
+        # Use a temporary file to store the downloaded photo
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as temp_file:
+            temp_file.write(data)
+            photo_path = temp_file.name  # Get the path to the temporary file
+
         logger.info(f'Downloaded photo at: {photo_path}')
         return photo_path
     except Exception as e:
@@ -140,10 +153,25 @@ class ImageProcessingBot(Bot):
                     logger.info(f'Stored first image for concat: {self._first_image_path}')
                     self.send_text(msg['chat']['id'],
                                    "First image received. Please send the second image with 'concat' caption.")
+                    return
+
+            img = Img(photo_path)
+            if caption == 'Blur':
+                img.blur()
+            elif caption == 'Contour':
+                img.contour()
+            elif caption == 'Rotate':
+                img.rotate()
+            elif caption == 'Segment':
+                img.segment()
+            elif caption == 'Salt and pepper':
+                img.salt_n_pepper()
+            else:
+                self.send_text(msg['chat']['id'],
+                               "Invalid caption. Supported captions: 'Blur', 'Contour', 'Rotate', 'Segment', 'Salt and pepper', 'Concat'.")
                 return
 
-            # Rest of your image processing code...
-            # (keeping the rest of the original code unchanged)
+            self.send_photo(msg['chat']['id'], img.save_img())
 
         except Exception as e:
             logger.error(f'Error processing image: {str(e)}')
