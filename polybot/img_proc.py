@@ -94,7 +94,7 @@ class Img:
 
         else:
             raise RuntimeError("Invalid direction. Use 'horizontal' or 'vertical'.")
-        # return value
+        # return img_value
         return self.save_img()
 
 
